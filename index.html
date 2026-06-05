@@ -14,20 +14,7 @@
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function() {
-      navigator.serviceWorker.register('/sw.js').then(function(reg) {
-        // Verifica atualização a cada 30 segundos
-        setInterval(function() { reg.update(); }, 30000);
-
-        reg.addEventListener('updatefound', function() {
-          var newWorker = reg.installing;
-          newWorker.addEventListener('statechange', function() {
-            if (newWorker.state === 'activated') {
-              // Recarrega a página automaticamente ao ativar novo SW
-              window.location.reload();
-            }
-          });
-        });
-      });
+      navigator.serviceWorker.register('/sw.js');
     });
   }
 </script>
@@ -1063,13 +1050,13 @@ body.tema-escuro .role-badge.lider{ background:rgba(251,191,36,.12); color:#fbbf
    🔧 CONFIGURE SEU FIREBASE AQUI
 ═══════════════════════════════════ */
 const FB_CONFIG = {
-  apiKey:            "SUA_API_KEY",
-  authDomain:        "SEU_PROJETO.firebaseapp.com",
-  databaseURL:       "https://SEU_PROJETO-default-rtdb.firebaseio.com",
-  projectId:         "SEU_PROJETO",
-  storageBucket:     "SEU_PROJETO.appspot.com",
-  messagingSenderId: "SEU_ID",
-  appId:             "SEU_APP_ID"
+  apiKey:            "AIzaSyBfMSiPWVN0KEeQv-O7NEP8PVHbC-NMNWE",
+  authDomain:        "igreja-celula.firebaseapp.com",
+  databaseURL:       "https://igreja-celula-default-rtdb.firebaseio.com",
+  projectId:         "igreja-celula",
+  storageBucket:     "igreja-celula.firebasestorage.app",
+  messagingSenderId: "102879777817",
+  appId:             "1:102879777817:web:6ab0e5de5c06cb22060688"
 };
 
 let db = null;
