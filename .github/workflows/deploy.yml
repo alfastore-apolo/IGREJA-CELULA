@@ -8,10 +8,14 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repositório
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
+
+      - name: Substituir timestamp no sw.js
+        run: |
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          sed -i "s/__TIMESTAMP__/$TIMESTAMP/g" sw.js
+          echo "Cache version: celula-app-v$TIMESTAMP"
 
       - name: Deploy para Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
