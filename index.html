@@ -14,7 +14,20 @@
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function() {
-      navigator.serviceWorker.register('/sw.js');
+      navigator.serviceWorker.register('/sw.js').then(function(reg) {
+        // Verifica atualização a cada 30 segundos
+        setInterval(function() { reg.update(); }, 30000);
+
+        reg.addEventListener('updatefound', function() {
+          var newWorker = reg.installing;
+          newWorker.addEventListener('statechange', function() {
+            if (newWorker.state === 'activated') {
+              // Recarrega a página automaticamente ao ativar novo SW
+              window.location.reload();
+            }
+          });
+        });
+      });
     });
   }
 </script>
