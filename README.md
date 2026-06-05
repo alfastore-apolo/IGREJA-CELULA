@@ -1,4 +1,4 @@
-# Célula.App
+# Célula.App  
 
 Aplicativo PWA de gestão de células da Igreja de Vencedores.
 
