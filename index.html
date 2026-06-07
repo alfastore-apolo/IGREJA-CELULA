@@ -554,34 +554,15 @@ body.tema-escuro .role-badge.lider{ background:rgba(251,191,36,.12); color:#fbbf
 <div id="authScreen">
   <div class="auth-box">
     <div class="auth-logo">
-      <p style="font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);">⛪ Igreja de Vencedores</p>
-      <h2>Célula<span style="color:var(--accent)">.</span>App</h2>
-      <p>Faça login ou crie sua conta</p>
+      <p style="font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);">&#9962; Igreja de Vencedores</p>
+      <h2>C&#233;lula<span style="color:var(--accent)">.</span>App</h2>
+      <p>Como voc&#234; se chama?</p>
     </div>
-    <div class="auth-tabs">
-      <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Entrar</button>
-      <button class="auth-tab" id="tabCadastro" onclick="switchAuthTab('cadastro')">Cadastrar</button>
-    </div>
-    <!-- LOGIN -->
-    <div id="formLogin" class="auth-form">
-      <input class="auth-input" type="email" id="loginEmail" placeholder="Seu e-mail" autocomplete="email" />
-      <input class="auth-input" type="password" id="loginSenha" placeholder="Sua senha" autocomplete="current-password" />
-      <div class="auth-error" id="loginError"></div>
-      <button class="auth-btn" onclick="doLogin()">Entrar</button>
-    </div>
-    <!-- CADASTRO -->
-    <div id="formCadastro" class="auth-form" style="display:none">
-      <input class="auth-input" type="text" id="cadNome" placeholder="Seu nome completo" autocomplete="name" />
-      <input class="auth-input" type="email" id="cadEmail" placeholder="Seu e-mail" autocomplete="email" />
-      <input class="auth-input" type="password" id="cadSenha" placeholder="Crie uma senha" autocomplete="new-password" />
-      <div class="auth-error" id="cadError"></div>
-      <button class="auth-btn" onclick="doCadastro()">Criar conta</button>
-    </div>
-    <!-- Acesso sem conta -->
-    <div style="margin-top:18px; text-align:center;">
-      <button onclick="entrarSemConta()" style="background:none;border:none;color:var(--muted);font-family:var(--font-system);font-size:13px;cursor:pointer;text-decoration:underline;">
-        Entrar sem conta (acesso limitado)
-      </button>
+    <!-- APENAS NOME -->
+    <div id="formNome" class="auth-form">
+      <input class="auth-input" type="text" id="inputNome" placeholder="Nome e sobrenome" autocomplete="name" />
+      <div class="auth-error" id="nomeError"></div>
+      <button class="auth-btn" onclick="entrarComNome()">Entrar</button>
     </div>
   </div>
 </div>
@@ -2202,113 +2183,48 @@ renderCells();
 CELLS.forEach(listenMembers);
 
 /* ═══════════════════════════════════════
-   🔐 AUTENTICAÇÃO FIREBASE
+   🔐 LOGIN POR NOME
 ═══════════════════════════════════════ */
 
-function switchAuthTab(tab){
-  document.getElementById('tabLogin').classList.toggle('active', tab==='login');
-  document.getElementById('tabCadastro').classList.toggle('active', tab==='cadastro');
-  document.getElementById('formLogin').style.display   = tab==='login'    ? 'flex' : 'none';
-  document.getElementById('formCadastro').style.display = tab==='cadastro' ? 'flex' : 'none';
-}
-
-function authErrMsg(code){
-  const map = {
-    'auth/email-already-in-use':     'Este e-mail já está em uso.',
-    'auth/invalid-email':            'E-mail inválido.',
-    'auth/weak-password':            'Senha muito fraca (mínimo 6 caracteres).',
-    'auth/user-not-found':           'E-mail não encontrado.',
-    'auth/wrong-password':           'Senha incorreta.',
-    'auth/invalid-credential':       'E-mail ou senha incorretos.',
-    'auth/too-many-requests':        'Muitas tentativas. Tente novamente mais tarde.',
-    'auth/network-request-failed':   'Erro de conexão. Verifique sua internet.',
-  };
-  return map[code] || 'Erro: ' + code;
-}
-
-function doLogin(){
-  const email = document.getElementById('loginEmail').value.trim();
-  const senha  = document.getElementById('loginSenha').value;
-  const errEl  = document.getElementById('loginError');
+function entrarComNome(){
+  var nome = document.getElementById('inputNome').value.trim();
+  var errEl = document.getElementById('nomeError');
   errEl.textContent = '';
-  if(!email || !senha){ errEl.textContent = 'Preencha e-mail e senha.'; return; }
-  if(!auth){ errEl.textContent = 'Firebase não configurado.'; return; }
-  auth.signInWithEmailAndPassword(email, senha)
-    .catch(function(e){ errEl.textContent = authErrMsg(e.code); });
+  if(!nome){ errEl.textContent = 'Por favor, informe seu nome completo.'; return; }
+  if(nome.split(/\s+/).filter(function(p){ return p.length > 0; }).length < 2){
+    errEl.textContent = 'Informe seu nome e sobrenome.'; return;
+  }
+  localStorage.setItem('celulaUserName', nome);
+  _abrirApp(nome);
 }
 
-function doCadastro(){
-  const nome  = document.getElementById('cadNome').value.trim();
-  const email = document.getElementById('cadEmail').value.trim();
-  const senha = document.getElementById('cadSenha').value;
-  const errEl = document.getElementById('cadError');
-  errEl.textContent = '';
-  if(!nome){ errEl.textContent = 'Informe seu nome completo.'; return; }
-  if(!email){ errEl.textContent = 'Informe seu e-mail.'; return; }
-  if(!senha || senha.length < 6){ errEl.textContent = 'A senha precisa ter pelo menos 6 caracteres.'; return; }
-  if(!auth){ errEl.textContent = 'Firebase não configurado.'; return; }
-  auth.createUserWithEmailAndPassword(email, senha)
-    .then(function(cred){
-      return cred.user.updateProfile({ displayName: nome });
-    })
-    .then(function(){
-      // Salva perfil no Realtime Database também
-      if(db){
-        const uid = auth.currentUser.uid;
-        db.ref('usuarios/'+uid).set({ nome: nome, email: email });
-      }
-    })
-    .catch(function(e){ errEl.textContent = authErrMsg(e.code); });
+function _abrirApp(nome){
+  currentUser = { displayName: nome, uid: 'local_' + nome.replace(/\s+/g,'_').toLowerCase() };
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('userBarName').textContent = '👤 ' + nome;
+  document.getElementById('userBar').style.display = 'flex';
 }
 
 function doLogout(){
-  if(auth) auth.signOut();
-}
-
-function onUserLoggedIn(user){
-  currentUser = user;
-  document.getElementById('authScreen').style.display = 'none';
-  const name = user.displayName || user.email;
-  document.getElementById('userBarName').textContent = '👤 ' + name;
-  document.getElementById('userBar').style.display = 'flex';
-  // Registrar presença e acesso
-  registrarPresenca(user);
-  registrarAcesso(user);
-}
-
-function onUserLoggedOut(){
+  localStorage.removeItem('celulaUserName');
   currentUser = null;
   document.getElementById('authScreen').style.display = 'flex';
   document.getElementById('userBar').style.display = 'none';
+  document.getElementById('inputNome').value = '';
 }
 
-// Observa estado de autenticação — persiste automaticamente no dispositivo
-if(auth){
-  auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-  auth.onAuthStateChanged(function(user){
-    if(user){ onUserLoggedIn(user); } else { onUserLoggedOut(); }
-  });
-} else {
-  // Sem Firebase configurado: esconde tela de login para não bloquear
-  document.getElementById('authScreen').style.display = 'none';
-}
+// Verifica se já há nome salvo (persistência local)
+(function(){
+  var nomeSalvo = localStorage.getItem('celulaUserName');
+  if(nomeSalvo){ _abrirApp(nomeSalvo); }
+})();
 
-// Permite submeter formulários com Enter
+// Permite submeter com Enter
 document.addEventListener('keydown', function(e){
-  if(e.key !== 'Enter') return;
-  if(document.getElementById('formLogin').style.display !== 'none'){
-    doLogin();
-  } else if(document.getElementById('formCadastro').style.display !== 'none'){
-    doCadastro();
+  if(e.key === 'Enter' && document.getElementById('authScreen').style.display !== 'none'){
+    entrarComNome();
   }
 });
-
-
-function entrarSemConta(){
-  document.getElementById('authScreen').style.display = 'none';
-  document.getElementById('userBar').style.display = 'flex';
-  document.getElementById('userBarName').textContent = '👤 Visitante';
-}
 
 /* ═══════════════════════════════════════
    📄 ARQUIVOS DO TOPO + 📡 AO VIVO
