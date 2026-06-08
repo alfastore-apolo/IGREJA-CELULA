@@ -990,7 +990,7 @@ body.tema-escuro .role-badge.lider{ background:rgba(251,191,36,.12); color:#fbbf
 <div class="overlay" id="overlayMembro">
   <div class="modal">
     <h3 id="modalMembroTitle">Adicionar Membro</h3>
-    <input class="modal-input" type="text" id="inputNome" placeholder="Nome completo do membro" autocomplete="off" />
+    <input class="modal-input" type="text" id="inputNomeMembro" placeholder="Nome completo do membro" autocomplete="off" />
     <div class="modal-row">
       <button class="btn-cancel" id="btnCancelarMembro">Cancelar</button>
       <button class="btn-confirm" id="btnAdicionarMembro">Adicionar ✓</button>
@@ -1261,16 +1261,15 @@ document.getElementById('inputSenha').addEventListener('keydown',function(e){
 document.getElementById('btnCancelarMembro').addEventListener('click',closeModalMembro);
 document.getElementById('btnAdicionarMembro').addEventListener('click',confirmAdd);
 document.getElementById('overlayMembro').addEventListener('click',function(e){ if(e.target===this) closeModalMembro(); });
-document.getElementById('inputNome').addEventListener('keydown',function(e){
+document.getElementById('inputNomeMembro').addEventListener('keydown',function(e){
   if(e.key==='Enter') confirmAdd();
-  if(e.key==='Escape') closeModalMembro();
 });
 
-function openModal(cell){ addingToCell=cell; document.getElementById('modalMembroTitle').textContent='Adicionar em '+CELL_LABELS[cell]; document.getElementById('inputNome').value=''; document.getElementById('overlayMembro').classList.add('open'); setTimeout(()=>document.getElementById('inputNome').focus(),80); }
+function openModal(cell){ addingToCell=cell; document.getElementById('modalMembroTitle').textContent='Adicionar em '+CELL_LABELS[cell]; document.getElementById('inputNomeMembro').value=''; document.getElementById('overlayMembro').classList.add('open'); setTimeout(()=>document.getElementById('inputNomeMembro').focus(),80); }
 function closeModalMembro(){ document.getElementById('overlayMembro').classList.remove('open'); }
 function confirmAdd(){
-  const nome=document.getElementById('inputNome').value.trim();
-  if(!nome){ document.getElementById('inputNome').focus(); return; }
+  const nome=document.getElementById('inputNomeMembro').value.trim();
+  if(!nome){ document.getElementById('inputNomeMembro').focus(); return; }
   addMember(addingToCell,nome);
   closeModalMembro();
   toast(nome+' adicionado(a)! ✓');
