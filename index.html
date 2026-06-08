@@ -603,7 +603,17 @@ body.tema-escuro .role-badge.lider{ background:rgba(251,191,36,.12); color:#fbbf
 <main>
   <!-- FREQUÊNCIA -->
   <div id="page-freq" class="page active">
+    <div class="tasks-top">
+      <h2>📋 Frequência</h2>
+      <p class="tasks-sub">Registre a presença de cada membro por reunião semanal.</p>
+    </div>
+    <div class="week-row">
+      <button class="week-nav" onclick="changeWeekFreq(-1)">&#8249;</button>
+      <span class="week-label" id="freqWeekLabel"></span>
+      <button class="week-nav" onclick="changeWeekFreq(1)">&#8250;</button>
+    </div>
     <div class="cells-grid" id="cellsGrid"></div>
+    <div id="freqBimestreSection" style="margin-top:28px;"></div>
   </div>
 
   <!-- TAREFAS -->
@@ -1066,6 +1076,8 @@ let localIdSeq   = 1;
 let currentMonth = new Date().getMonth();
 let currentYear  = new Date().getFullYear();
 let currentWeek  = weekNum(new Date());
+let freqWeek     = weekNum(new Date());
+let freqYear     = new Date().getFullYear();
 let patrWeek     = weekNum(new Date());
 let patrYear     = new Date().getFullYear();
 let tasksRef     = null;
@@ -1108,6 +1120,7 @@ async function sha256(str){
 /* ═══════════════════
    UTIL DATAS
 ═══════════════════ */
+const MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 function weekNum(d){
   d=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
   d.setUTCDate(d.getUTCDate()+4-(d.getUTCDay()||7));
@@ -1116,6 +1129,13 @@ function weekNum(d){
 }
 function monthKey(){ return currentYear+'-'+String(currentMonth+1).padStart(2,'0'); }
 function weekKey() { return currentYear+'-S'+String(currentWeek).padStart(2,'0'); }
+function freqWeekKey(){ return freqYear+'-S'+String(freqWeek).padStart(2,'0'); }
+function freqWeekLabelStr(){
+  var jan4=new Date(freqYear,0,4); var dow=jan4.getDay()||7;
+  var seg1=new Date(jan4); seg1.setDate(jan4.getDate()-dow+1);
+  var segCur=new Date(seg1); segCur.setDate(seg1.getDate()+(freqWeek-1)*7);
+  return 'Semana '+freqWeek+' · '+MESES[segCur.getMonth()]+' '+freqYear;
+}
 function weekKeyPatr(){ return patrYear+'-S'+String(patrWeek).padStart(2,'0'); }
 function monthKeyPatr(){ return patrYear+'-'+String(currentMonth+1).padStart(2,'0'); }
 
@@ -1299,8 +1319,8 @@ function renameMember(cell,id,nome){
 }
 function togglePresence(cell,id,cur){
   const next=cur==='none'?'presente':cur==='presente'?'falta':'none';
-  if(useFirebase()){ const u={}; u[monthKey()]=next; db.ref('celulas/'+cell+'/membros/'+id+'/frequencia').update(u); }
-  else { if(!localData[cell].membros[id].frequencia) localData[cell].membros[id].frequencia={}; localData[cell].membros[id].frequencia[monthKey()]=next; renderMembers(cell,localData[cell].membros); }
+  if(useFirebase()){ const u={}; u[freqWeekKey()]=next; db.ref('celulas/'+cell+'/membros/'+id+'/frequencia').update(u); }
+  else { if(!localData[cell].membros[id].frequencia) localData[cell].membros[id].frequencia={}; localData[cell].membros[id].frequencia[freqWeekKey()]=next; renderMembers(cell,localData[cell].membros); }
 }
 
 /* ═══════════════════
@@ -1330,7 +1350,7 @@ function renderMembers(cell,data){
   if(container) container.innerHTML='';
 
   function buildRow(id){
-    const m=data[id]||{}; const fr=(m.frequencia&&m.frequencia[monthKey()])||'none';
+    const m=data[id]||{}; const fr=(m.frequencia&&m.frequencia[freqWeekKey()])||'none';
     const role=m.role||'membro';
     if(fr==='presente') pres++; if(fr==='falta') falt++;
     const icon=fr==='presente'?'✓ Presente':fr==='falta'?'✗ Falta':'— Marcar';
@@ -1365,6 +1385,7 @@ function renderMembers(cell,data){
 
   const sb=document.getElementById('stats-'+cell);
   if(sb) sb.innerHTML='<span class="stat">✅ Presentes: <strong>'+pres+'</strong></span><span class="stat">❌ Faltas: <strong>'+falt+'</strong></span><span class="stat">— Sem reg.: <strong>'+(keys.length-pres-falt)+'</strong></span>';
+  if(typeof renderFreqBimestre==='function') setTimeout(renderFreqBimestre, 200);
 }
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
 function listenMembers(cell){
@@ -1395,11 +1416,140 @@ function renderTasksPage(){
 function setBadge(tid,cell){ const b=document.getElementById('tb-'+tid); if(!b) return; if(!cell){b.className='cell-badge';b.textContent='';return;} b.className='cell-badge '+cell+' show'; b.textContent=CELL_LABELS[cell]; }
 function saveTasks(){ const d={}; TASKS_DEF.forEach(function(t){ const e=document.getElementById('ts-'+t.id); d[t.id]=e?e.value:''; }); if(useFirebase()){ db.ref('tarefas/'+weekKey()).set(d); } else { localTasks[weekKey()]=d; } toast('Escala salva! ✓'); }
 function changeWeek(dir){ currentWeek+=dir; if(currentWeek<1){currentYear--;currentWeek=52;} if(currentWeek>52){currentYear++;currentWeek=1;} renderTasksPage(); }
+function changeWeekFreq(dir){
+  freqWeek+=dir;
+  if(freqWeek<1){freqYear--;freqWeek=52;}
+  if(freqWeek>52){freqYear++;freqWeek=1;}
+  renderFreqHeader();
+  CELLS.forEach(function(cell){
+    if(useFirebase()){
+      db.ref('celulas/'+cell+'/membros').once('value',function(snap){ renderMembers(cell,snap.val()||{}); });
+    } else {
+      renderMembers(cell,localData[cell].membros);
+    }
+  });
+  renderFreqBimestre();
+}
+function renderFreqHeader(){
+  var el=document.getElementById('freqWeekLabel');
+  if(el) el.textContent=freqWeekLabelStr();
+}
+function renderFreqBimestre(){
+  var sec=document.getElementById('freqBimestreSection');
+  if(!sec) return;
+
+  // Determina bimestre atual baseado na freqWeek
+  var jan4=new Date(freqYear,0,4); var dow=jan4.getDay()||7;
+  var seg1=new Date(jan4); seg1.setDate(jan4.getDate()-dow+1);
+  var segCur=new Date(seg1); segCur.setDate(seg1.getDate()+(freqWeek-1)*7);
+  var mes=segCur.getMonth(); // 0-11
+  var bimIdx=Math.floor(mes/2); // 0=Jan-Fev, 1=Mar-Abr, 2=Mai-Jun, 3=Jul-Ago, 4=Set-Out, 5=Nov-Dez
+  var bimStart=bimIdx*2;
+  var bimEnd=bimStart+1;
+  var bimLabel=MESES[bimStart]+' – '+MESES[bimEnd];
+
+  // Coleta todas as semanas que caem dentro do bimestre (mesmo ano)
+  function weekInBimestre(wkKey){
+    // wkKey = "YYYY-SWW"
+    var parts=wkKey.match(/^(\d{4})-S(\d+)$/);
+    if(!parts) return false;
+    var y=parseInt(parts[1]); var wn=parseInt(parts[2]);
+    if(y!==freqYear) return false;
+    var jan4b=new Date(y,0,4); var dowb=jan4b.getDay()||7;
+    var seg1b=new Date(jan4b); seg1b.setDate(jan4b.getDate()-dowb+1);
+    var segW=new Date(seg1b); segW.setDate(seg1b.getDate()+(wn-1)*7);
+    return Math.floor(segW.getMonth()/2)===bimIdx;
+  }
+
+  function buildBimestre(allMembros){
+    // allMembros: { cell: { id: {nome, frequencia:{wkKey: 'presente'|'falta'|'none'}} } }
+    var rows='';
+    var totalSemanas=0;
+
+    CELLS.forEach(function(cell){
+      var membros=allMembros[cell]||{};
+      var keys=Object.keys(membros);
+      if(!keys.length) return;
+
+      // Descobre quais semanas do bimestre têm registro nesta célula
+      var semanasSet=new Set();
+      keys.forEach(function(id){
+        var freq=(membros[id].frequencia)||{};
+        Object.keys(freq).forEach(function(wk){ if(weekInBimestre(wk)) semanasSet.add(wk); });
+      });
+      var semanas=Array.from(semanasSet).sort();
+      if(semanas.length>totalSemanas) totalSemanas=semanas.length;
+
+      var color=cell==='azul'?'#3b82f6':cell==='vermelho'?'#ef4444':'#22c55e';
+      var icon=cell==='azul'?'🔵':cell==='vermelho'?'🔴':'🟢';
+
+      rows+='<div class="pont-section-block" style="margin-bottom:18px;">';
+      rows+='<div class="pont-block-title">'+icon+' '+CELL_LABELS[cell]+'<span class="pont-block-badge mes">'+semanas.length+' reuniões</span></div>';
+      rows+='<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">';
+      rows+='<thead><tr><th style="text-align:left;padding:6px 8px;color:var(--muted);font-weight:700;">Membro</th>';
+      semanas.forEach(function(wk){
+        var wn=parseInt(wk.split('-S')[1]);
+        rows+='<th style="text-align:center;padding:6px 4px;color:var(--muted);font-weight:700;white-space:nowrap;">S'+wn+'</th>';
+      });
+      rows+='<th style="text-align:center;padding:6px 8px;color:var(--muted);font-weight:700;">✓</th>';
+      rows+='<th style="text-align:center;padding:6px 8px;color:var(--muted);font-weight:700;">✗</th>';
+      rows+='<th style="text-align:center;padding:6px 8px;color:var(--muted);font-weight:700;">%</th>';
+      rows+='</tr></thead><tbody>';
+
+      // Líderes primeiro
+      var lids=keys.filter(function(id){ return (membros[id].role||'membro')==='lider'; });
+      var mems=keys.filter(function(id){ return (membros[id].role||'membro')!=='lider'; });
+      var ordered=lids.concat(mems);
+
+      ordered.forEach(function(id){
+        var m=membros[id]||{};
+        var freq=m.frequencia||{};
+        var pres=0,falt=0;
+        semanas.forEach(function(wk){ var v=freq[wk]; if(v==='presente') pres++; else if(v==='falta') falt++; });
+        var total=semanas.length;
+        var pct=total>0?Math.round(pres/total*100):0;
+        var pctColor=pct>=75?'#22c55e':pct>=50?'#f59e0b':'#ef4444';
+        var isLider=(m.role||'membro')==='lider';
+        rows+='<tr style="border-top:1px solid var(--border);">';
+        rows+='<td style="padding:7px 8px;font-weight:'+(isLider?'700':'400')+';">'+esc(m.nome||'')+(isLider?' 👑':'')+'</td>';
+        semanas.forEach(function(wk){
+          var v=freq[wk]||'none';
+          var c=v==='presente'?'#22c55e':v==='falta'?'#ef4444':'var(--muted)';
+          var sym=v==='presente'?'✓':v==='falta'?'✗':'—';
+          rows+='<td style="text-align:center;padding:7px 4px;color:'+c+';font-weight:800;">'+sym+'</td>';
+        });
+        rows+='<td style="text-align:center;padding:7px 8px;color:#22c55e;font-weight:800;">'+pres+'</td>';
+        rows+='<td style="text-align:center;padding:7px 8px;color:#ef4444;font-weight:800;">'+falt+'</td>';
+        rows+='<td style="text-align:center;padding:7px 8px;font-weight:800;color:'+pctColor+';">'+pct+'%</td>';
+        rows+='</tr>';
+      });
+      rows+='</tbody></table></div></div>';
+    });
+
+    sec.innerHTML='<div style="margin-bottom:16px;"><div class="pont-block-title">📊 Resumo do Bimestre<span class="pont-block-badge mes">'+bimLabel+'</span></div></div>'+rows;
+  }
+
+  if(useFirebase()){
+    var allM={};
+    var pending=CELLS.length;
+    CELLS.forEach(function(cell){
+      db.ref('celulas/'+cell+'/membros').once('value',function(snap){
+        allM[cell]=snap.val()||{};
+        pending--;
+        if(pending===0) buildBimestre(allM);
+      });
+    });
+  } else {
+    var allM2={};
+    CELLS.forEach(function(cell){ allM2[cell]=localData[cell].membros; });
+    buildBimestre(allM2);
+  }
+}
 
 /* ═══════════════════
    PATROCÍNIO
 ═══════════════════ */
-const MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+// MESES moved above
 
 function patrWeekLabel(){
   // Descobre o mês baseado na segunda-feira da semana selecionada
@@ -1624,6 +1774,7 @@ function showPage(p,btn){
   document.querySelectorAll('.tab').forEach(function(el){ el.classList.remove('active'); });
   document.getElementById('page-'+p).classList.add('active');
   btn.classList.add('active');
+  if(p==='freq')  { renderFreqHeader(); renderFreqBimestre(); }
   if(p==='tasks') renderTasksPage();
   if(p==='patr')  { renderPatrPage(); calcBimestre(); }
   if(p==='palavra') renderPalavraPage();
@@ -2180,6 +2331,8 @@ function toast(msg){ const el=document.getElementById('toast'); el.textContent=m
 document.getElementById('monthSel').value=currentMonth;
 renderCells();
 CELLS.forEach(listenMembers);
+renderFreqHeader();
+renderFreqBimestre();
 
 /* ═══════════════════════════════════════
    🔐 LOGIN POR NOME
