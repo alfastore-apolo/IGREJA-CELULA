@@ -2351,10 +2351,15 @@ function entrarComNome(){
 }
 
 function _abrirApp(nome){
-  currentUser = { displayName: nome, uid: 'local_' + nome.replace(/\s+/g,'_').toLowerCase() };
+  currentUser = { displayName: nome, email: '', uid: 'local_' + nome.replace(/\s+/g,'_').toLowerCase() };
   document.getElementById('authScreen').style.display = 'none';
   document.getElementById('userBarName').textContent = '👤 ' + nome;
   document.getElementById('userBar').style.display = 'flex';
+  // Registra presença (online agora) e contabiliza acesso nos analytics
+  if(useFirebase()){
+    registrarPresenca(currentUser);
+    registrarAcesso(currentUser);
+  }
 }
 
 function doLogout(){
